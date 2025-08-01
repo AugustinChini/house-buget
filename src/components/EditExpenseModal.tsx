@@ -12,6 +12,7 @@ import {
   Stack,
 } from "@mui/material";
 import { expenseService } from "../services";
+import { toDateInputValue } from "../utils/dateUtils";
 import type { Expense } from "../models";
 
 interface EditExpenseModalProps {
@@ -41,8 +42,7 @@ function EditExpenseForm({
     amount: expense.amount.toString(),
     categoryId: expense.categoryId.toString(),
     type: expense.type as "expense" | "income",
-    description: expense.description || "",
-    date: expense.date.toISOString().split("T")[0], // Format for date input
+    date: toDateInputValue(expense.date), // Format for date input
   });
 
   // Update form data when expense changes
@@ -52,10 +52,9 @@ function EditExpenseForm({
       amount: expense.amount.toString(),
       categoryId: expense.categoryId.toString(),
       type: expense.type,
-      description: expense.description || "",
-      date: expense.date.toISOString().split("T")[0],
+      date: toDateInputValue(expense.date),
     });
-  }, []);
+  }, [expense]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,8 +70,7 @@ function EditExpenseForm({
         amount: parseFloat(formData.amount),
         categoryId: parseInt(formData.categoryId),
         date: new Date(formData.date),
-        type: formData.type,
-        description: formData.description || undefined,
+        type: formData.type
       });
 
       onSuccess();
@@ -147,16 +145,7 @@ function EditExpenseForm({
           </Select>
         </FormControl>
 
-        <TextField
-          label="Description (optionnel)"
-          value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
-          fullWidth
-          multiline
-          rows={3}
-        />
+
 
         <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
           <Button variant="outlined" onClick={onClose}>

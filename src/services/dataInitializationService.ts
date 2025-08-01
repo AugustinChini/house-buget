@@ -1,4 +1,4 @@
-import { indexedDBService } from "../dao/indexedDBService";
+import { apiService } from "./apiService";
 import type { Category } from "../models/Category";
 import type { Expense } from "../models/Expense";
 
@@ -12,8 +12,8 @@ class DataInitializationService {
 
     try {
       // Check if data already exists
-      const existingCategories = await indexedDBService.getAllCategories();
-      const existingExpenses = await indexedDBService.getAllExpenses();
+      const existingCategories = await apiService.getAllCategories();
+      const existingExpenses = await apiService.getAllExpenses();
 
       if (existingCategories.length > 0 || existingExpenses.length > 0) {
         this.isInitialized = true;
@@ -43,53 +43,53 @@ class DataInitializationService {
         budget: 300,
         color: "#4caf50",
         icon: "restaurant",
-        description: "Dépenses alimentaires et restaurants",
         isActive: true,
+        show:true
       },
       {
         name: "Divertissement",
         budget: 100,
         color: "#f44336",
         icon: "movie",
-        description: "Sorties, cinéma, loisirs",
         isActive: true,
+        show:true
       },
       {
         name: "Transport",
         budget: 100,
         color: "#ff9800",
         icon: "directions_car",
-        description: "Essence, transports en commun",
         isActive: true,
+        show:true
       },
       {
         name: "Logement",
         budget: 750,
         color: "#2196f3",
         icon: "home",
-        description: "Loyer, charges, électricité",
         isActive: true,
+        show:true
       },
       {
         name: "Santé",
         budget: 50,
         color: "#9c27b0",
         icon: "local_hospital",
-        description: "Médecin, médicaments",
         isActive: true,
+        show:true
       },
       {
         name: "Shopping",
         budget: 150,
         color: "#e91e63",
         icon: "shopping_bag",
-        description: "Vêtements, accessoires",
         isActive: true,
+        show:true
       },
     ];
 
     for (const category of defaultCategories) {
-      await indexedDBService.createCategory(category);
+      await apiService.createCategory(category);
     }
   }
 
@@ -104,7 +104,6 @@ class DataInitializationService {
         amount: 45.5,
         categoryId: 1,
         categoryName: "Alimentation",
-        description: "Courses de la semaine",
         date: new Date(currentYear, currentMonth, 15),
         type: "expense",
         paymentMethod: "Carte bancaire",
@@ -116,7 +115,6 @@ class DataInitializationService {
         amount: 12.5,
         categoryId: 2,
         categoryName: "Divertissement",
-        description: "Film au cinéma",
         date: new Date(currentYear, currentMonth, 16),
         type: "expense",
         paymentMethod: "Espèces",
@@ -128,7 +126,6 @@ class DataInitializationService {
         amount: 65.0,
         categoryId: 3,
         categoryName: "Transport",
-        description: "Plein d'essence",
         date: new Date(currentYear, currentMonth, 17),
         type: "expense",
         paymentMethod: "Carte bancaire",
@@ -140,7 +137,6 @@ class DataInitializationService {
         amount: 750.0,
         categoryId: 4,
         categoryName: "Logement",
-        description: "Loyer du mois",
         date: new Date(currentYear, currentMonth, 1),
         type: "expense",
         paymentMethod: "Virement",
@@ -153,7 +149,6 @@ class DataInitializationService {
         amount: 3200.0,
         categoryId: 1,
         categoryName: "Alimentation",
-        description: "Salaire du mois",
         date: new Date(currentYear, currentMonth, 31),
         type: "income",
         paymentMethod: "Virement",
@@ -166,7 +161,6 @@ class DataInitializationService {
         amount: 85.0,
         categoryId: 1,
         categoryName: "Alimentation",
-        description: "Dîner au restaurant",
         date: new Date(currentYear, currentMonth, 20),
         type: "expense",
         paymentMethod: "Carte bancaire",
@@ -178,7 +172,6 @@ class DataInitializationService {
         amount: 15.99,
         categoryId: 2,
         categoryName: "Divertissement",
-        description: "Abonnement Netflix",
         date: new Date(currentYear, currentMonth, 5),
         type: "expense",
         paymentMethod: "Carte bancaire",
@@ -191,7 +184,6 @@ class DataInitializationService {
         amount: 120.0,
         categoryId: 4,
         categoryName: "Logement",
-        description: "Facture d'électricité",
         date: new Date(currentYear, currentMonth, 10),
         type: "expense",
         paymentMethod: "Prélèvement",
@@ -202,13 +194,26 @@ class DataInitializationService {
     ];
 
     for (const expense of sampleExpenses) {
-      await indexedDBService.createExpense(expense);
+      await apiService.createExpense(expense);
     }
   }
 
   async resetData(): Promise<void> {
     try {
-      await indexedDBService.clearAllData();
+      // Note: The API doesn't have a clearAllData method, so we'll implement it by deleting all items
+      const categories = await apiService.getAllCategories();
+      const expenses = await apiService.getAllExpenses();
+      
+      // Delete all expenses first (due to foreign key constraints)
+      for (const expense of expenses) {
+        await apiService.deleteExpense(expense.id);
+      }
+      
+      // Delete all categories
+      for (const category of categories) {
+        await apiService.deleteCategory(category.id);
+      }
+      
       this.isInitialized = false;
       await this.initializeData();
       console.log("Database reset and reinitialized");

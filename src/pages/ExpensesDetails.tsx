@@ -30,6 +30,7 @@ import {
 } from "@mui/icons-material";
 import { useSearchParams } from "react-router-dom";
 import { expenseService, categoryService } from "../services";
+import { formatDate } from "../utils/dateUtils";
 import type { Expense } from "../models";
 import { CreateExpenseModal } from "../components/CreateExpenseModal";
 import { EditExpenseModal } from "../components/EditExpenseModal";
@@ -78,6 +79,7 @@ export function ExpensesDetails() {
       // Get categories
       const allCategories = await categoryService.getAllCategories({
         isActive: true,
+        show: true,
       });
       setCategories(
         allCategories.map((cat) => ({ id: cat.id, name: cat.name }))
@@ -120,14 +122,7 @@ export function ExpensesDetails() {
     return category?.name || "Inconnue";
   };
 
-  // Format date
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  // Format date - using utility function from dateUtils
 
   // Handle expense deletion
   const handleDeleteExpense = async (

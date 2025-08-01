@@ -6,45 +6,44 @@ import type {
   CategoryFilters,
 } from "../models/Category";
 import type { Expense } from "../models/Expense";
-import { indexedDBService } from "../dao/indexedDBService";
+import { apiService } from "./apiService";
+import { ensureDate } from "../utils/dateUtils";
 
 class CategoryService {
   // Get all categories
   async getAllCategories(filters?: CategoryFilters): Promise<Category[]> {
-    const allCategories = await indexedDBService.getAllCategories();
-    let filteredCategories = [...allCategories];
-
-    if (filters) {
-      if (filters.isActive !== undefined) {
-        filteredCategories = filteredCategories.filter(
-          (cat) => cat.isActive === filters.isActive
-        );
-      }
-
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filteredCategories = filteredCategories.filter(
-          (cat) =>
-            cat.name.toLowerCase().includes(searchLower) ||
-            cat.description?.toLowerCase().includes(searchLower)
-        );
-      }
-    }
-
-    return filteredCategories;
+    const categories = await apiService.getAllCategories(filters);
+    return categories.map(category => ({
+      ...category,
+      createdAt: ensureDate(category.createdAt),
+      updatedAt: ensureDate(category.updatedAt)
+    }));
   }
 
   // Get category by ID
   async getCategoryById(id: number): Promise<Category | null> {
-    return await indexedDBService.getCategoryById(id);
+    const category = await apiService.getCategoryById(id);
+    if (!category) return null;
+    
+    return {
+      ...category,
+      createdAt: ensureDate(category.createdAt),
+      updatedAt: ensureDate(category.updatedAt)
+    };
   }
 
   // Create new category
   async createCategory(categoryData: CreateCategoryRequest): Promise<Category> {
-    return await indexedDBService.createCategory({
+    const category = await apiService.createCategory({
       ...categoryData,
       isActive: true,
+      show: categoryData.show !== undefined ? categoryData.show : true,
     });
+    return {
+      ...category,
+      createdAt: ensureDate(category.createdAt),
+      updatedAt: ensureDate(category.updatedAt)
+    };
   }
 
   // Update category
@@ -52,19 +51,26 @@ class CategoryService {
     id: number,
     updateData: UpdateCategoryRequest
   ): Promise<Category | null> {
-    return await indexedDBService.updateCategory(id, updateData);
+    const category = await apiService.updateCategory(id, updateData);
+    if (!category) return null;
+    
+    return {
+      ...category,
+      createdAt: ensureDate(category.createdAt),
+      updatedAt: ensureDate(category.updatedAt)
+    };
   }
 
   // Delete category (hard delete)
   async deleteCategory(id: number): Promise<boolean> {
-    return await indexedDBService.deleteCategory(id);
+    return await apiService.deleteCategory(id);
   }
 
   // Get categories with spending information
   async getCategoriesWithSpending(
     expenses: Expense[]
   ): Promise<CategoryWithSpending[]> {
-    const categories = await this.getAllCategories({ isActive: true });
+    const categories = await this.getAllCategories({ isActive: true, show: true });
 
     return categories.map((category) => {
       const categoryExpenses = expenses.filter(

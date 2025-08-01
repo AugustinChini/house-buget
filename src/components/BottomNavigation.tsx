@@ -29,7 +29,7 @@ export function BottomNavigationBar() {
     }
   }, [location.pathname]);
 
-  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
     switch (newValue) {
       case 0:

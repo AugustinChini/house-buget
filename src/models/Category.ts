@@ -6,6 +6,7 @@ export interface Category {
   icon?: string;
   description?: string;
   isActive: boolean;
+  show: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +25,7 @@ export interface CreateCategoryRequest {
   color: string;
   icon?: string;
   description?: string;
+  show?: boolean;
 }
 
 export interface UpdateCategoryRequest {
@@ -33,9 +35,11 @@ export interface UpdateCategoryRequest {
   icon?: string;
   description?: string;
   isActive?: boolean;
+  show?: boolean;
 }
 
 export interface CategoryFilters {
   isActive?: boolean;
+  show?: boolean;
   search?: string;
 }

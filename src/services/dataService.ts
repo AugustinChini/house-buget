@@ -1,53 +1,65 @@
-import { indexedDBService } from "../dao/indexedDBService";
+import { apiService } from "./apiService";
 import type { Category } from "../models/Category";
 import type { Expense, CreateExpenseRequest, UpdateExpenseRequest } from "../models/Expense";
 
 class DataService {
   // Category operations
   async getAllCategories(): Promise<Category[]> {
-    return await indexedDBService.getAllCategories();
+    return await apiService.getAllCategories();
   }
 
   async getCategoryById(id: number): Promise<Category | null> {
-    return await indexedDBService.getCategoryById(id);
+    return await apiService.getCategoryById(id);
   }
 
   async createCategory(categoryData: Omit<Category, "id" | "createdAt" | "updatedAt">): Promise<Category> {
-    return await indexedDBService.createCategory(categoryData);
+    return await apiService.createCategory(categoryData);
   }
 
   async updateCategory(id: number, updateData: Partial<Category>): Promise<Category | null> {
-    return await indexedDBService.updateCategory(id, updateData);
+    return await apiService.updateCategory(id, updateData);
   }
 
   async deleteCategory(id: number): Promise<boolean> {
-    return await indexedDBService.deleteCategory(id);
+    return await apiService.deleteCategory(id);
   }
 
   // Expense operations
   async getAllExpenses(): Promise<Expense[]> {
-    return await indexedDBService.getAllExpenses();
+    return await apiService.getAllExpenses();
   }
 
   async getExpenseById(id: number): Promise<Expense | null> {
-    return await indexedDBService.getExpenseById(id);
+    return await apiService.getExpenseById(id);
   }
 
   async createExpense(expenseData: CreateExpenseRequest): Promise<Expense> {
-    return await indexedDBService.createExpense(expenseData);
+    return await apiService.createExpense(expenseData);
   }
 
   async updateExpense(id: number, updateData: UpdateExpenseRequest): Promise<Expense | null> {
-    return await indexedDBService.updateExpense(id, updateData);
+    return await apiService.updateExpense(id, updateData);
   }
 
   async deleteExpense(id: number): Promise<boolean> {
-    return await indexedDBService.deleteExpense(id);
+    return await apiService.deleteExpense(id);
   }
 
   // Database management operations
   async clearAllData(): Promise<void> {
-    return await indexedDBService.clearAllData();
+    // Note: The API doesn't have a clearAllData method, so we'll implement it by deleting all items
+    const categories = await this.getAllCategories();
+    const expenses = await this.getAllExpenses();
+    
+    // Delete all expenses first (due to foreign key constraints)
+    for (const expense of expenses) {
+      await this.deleteExpense(expense.id);
+    }
+    
+    // Delete all categories
+    for (const category of categories) {
+      await this.deleteCategory(category.id);
+    }
   }
 
   async exportData(): Promise<{
@@ -86,8 +98,8 @@ class DataService {
         budget: category.budget,
         color: category.color,
         icon: category.icon,
-        description: category.description,
         isActive: category.isActive,
+        show: category.show
       };
       const newCategory = await this.createCategory(categoryData);
 
@@ -113,7 +125,6 @@ class DataService {
         amount: expense.amount,
         categoryId: newCategoryId, // Use the new category ID
         categoryName: expense.categoryName,
-        description: expense.description,
         date: new Date(expense.date),
         type: expense.type,
         paymentMethod: expense.paymentMethod,

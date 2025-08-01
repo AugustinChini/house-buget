@@ -15,6 +15,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { recurringExpenseService } from "../services/recurringExpenseService";
+import { formatDate } from "../utils/dateUtils";
 import type { Expense } from "../models/Expense";
 
 interface RecurringExpenseModalProps {
@@ -70,12 +71,7 @@ export function RecurringExpenseModal({
     onClose();
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-    });
-  };
+  // Using formatDate utility function
 
   const formatAmount = (amount: number) => {
     return amount.toLocaleString("fr-FR", {

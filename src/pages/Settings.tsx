@@ -4,15 +4,16 @@ import {
   Card,
   CardContent,
   Box,
-  Chip,
   TextField,
   Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
+import { Add as AddIcon, Visibility, VisibilityOff } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { categoryService, dataService } from "../services";
 import type { Category } from "../models";
@@ -24,11 +25,12 @@ export function Settings() {
   const [newCategoryBudget, setNewCategoryBudget] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showHiddenCategories, setShowHiddenCategories] = useState(false);
 
   // Load categories on component mount
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [showHiddenCategories]);
 
   // Animate content when component mounts
   useEffect(() => {
@@ -43,6 +45,7 @@ export function Settings() {
       setLoading(true);
       const allCategories = await categoryService.getAllCategories({
         isActive: true,
+        show: showHiddenCategories ? undefined : true,
       });
       setCategories(allCategories);
     } catch (error) {
@@ -89,6 +92,18 @@ export function Settings() {
         console.error("Error deleting category:", error);
         alert("Erreur lors de la suppression de la catégorie");
       }
+    }
+  };
+
+  const handleToggleCategoryVisibility = async (categoryId: number, currentShow: boolean) => {
+    try {
+      await categoryService.updateCategory(categoryId, {
+        show: !currentShow,
+      });
+      loadCategories(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating category visibility:", error);
+      alert("Erreur lors de la modification de la visibilité de la catégorie");
     }
   };
 
@@ -208,14 +223,26 @@ export function Settings() {
               <Typography variant="h6" gutterBottom>
                 Gestion des catégories
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setDialogOpen(true)}
-                size="small"
-              >
-                Ajouter
-              </Button>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showHiddenCategories}
+                      onChange={(e) => setShowHiddenCategories(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Afficher les catégories masquées"
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setDialogOpen(true)}
+                  size="small"
+                >
+                  Ajouter
+                </Button>
+              </Box>
             </Box>
 
             {loading ? (
@@ -223,22 +250,61 @@ export function Settings() {
                 Chargement des catégories...
               </Typography>
             ) : (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {categories.map((category) => (
-                  <Chip
+                  <Box
                     key={category.id}
-                    label={`${category.name} - ${category.budget.toLocaleString(
-                      "fr-FR",
-                      {
-                        style: "currency",
-                        currency: "EUR",
-                      }
-                    )}`}
-                    onDelete={() => handleDeleteCategory(category.id)}
-                    color="primary"
-                    variant="outlined"
-                    sx={{ mb: 1 }}
-                  />
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      p: 1,
+                      border: 1,
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      backgroundColor: category.show ? "background.paper" : "action.hover",
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {category.show ? (
+                        <Visibility color="primary" fontSize="small" />
+                      ) : (
+                        <VisibilityOff color="action" fontSize="small" />
+                      )}
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          textDecoration: category.show ? "none" : "line-through",
+                          color: category.show ? "text.primary" : "text.secondary",
+                        }}
+                      >
+                        {category.name} - {category.budget.toLocaleString("fr-FR", {
+                          style: "currency",
+                          currency: "EUR",
+                        })}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={category.show}
+                            onChange={() => handleToggleCategoryVisibility(category.id, category.show)}
+                            size="small"
+                          />
+                        }
+                        label=""
+                      />
+                      <Button
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        onClick={() => handleDeleteCategory(category.id)}
+                      >
+                        Supprimer
+                      </Button>
+                    </Box>
+                  </Box>
                 ))}
                 {categories.length === 0 && (
                   <Typography variant="body2" color="text.secondary">
@@ -247,6 +313,16 @@ export function Settings() {
                 )}
               </Box>
             )}
+            
+            <Box sx={{ mt: 2, p: 1, backgroundColor: "action.hover", borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                <Visibility fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
+                Catégorie visible
+                {" | "}
+                <VisibilityOff fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
+                Catégorie masquée
+              </Typography>
+            </Box>
           </CardContent>
         </Card>
 

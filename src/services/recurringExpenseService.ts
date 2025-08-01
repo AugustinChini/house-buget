@@ -1,5 +1,4 @@
 import { expenseService } from "./expenseService";
-import { dataService } from "./dataService";
 
 class RecurringExpenseService {
   // Check if it's the first time opening the app in a new month
