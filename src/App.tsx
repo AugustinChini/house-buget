@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider, createTheme, CssBaseline, Fab } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useEffect, useState } from "react";
@@ -48,7 +48,9 @@ function setPinToken() {
 
 function AppContent() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [categories, setCategories] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
   const [recurringModalOpen, setRecurringModalOpen] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(!isPinTokenValid());
 
@@ -75,7 +77,8 @@ function AppContent() {
   useEffect(() => {
     const checkRecurringExpenses = async () => {
       try {
-        const shouldShow = await recurringExpenseService.shouldShowRecurringModal();
+        const shouldShow =
+          await recurringExpenseService.shouldShowRecurringModal();
         if (shouldShow) {
           setRecurringModalOpen(true);
         }
@@ -83,7 +86,7 @@ function AppContent() {
         console.error("Error checking recurring expenses:", error);
       }
     };
-    
+
     // Wait a bit for the app to initialize before checking
     const timer = setTimeout(checkRecurringExpenses, 1000);
     return () => clearTimeout(timer);
@@ -92,12 +95,12 @@ function AppContent() {
   const handleModalSuccess = () => {
     setModalOpen(false);
     // Trigger a page refresh by dispatching a custom event
-    window.dispatchEvent(new CustomEvent('expenseAdded'));
+    window.dispatchEvent(new CustomEvent("expenseAdded"));
   };
 
   const handleRecurringExpensesCreated = () => {
     // Trigger a page refresh by dispatching a custom event
-    window.dispatchEvent(new CustomEvent('expenseAdded'));
+    window.dispatchEvent(new CustomEvent("expenseAdded"));
   };
 
   const handlePinSuccess = () => {
@@ -107,9 +110,18 @@ function AppContent() {
 
   return (
     <>
-      <PinCodeModal open={pinModalOpen} onSuccess={handlePinSuccess} correctPin={PIN_CODE} />
+      <PinCodeModal
+        open={pinModalOpen}
+        onSuccess={handlePinSuccess}
+        correctPin={PIN_CODE}
+      />
       {/* Le reste de l'app est désactivé tant que le code n'est pas validé */}
-      <div style={{ filter: pinModalOpen ? 'blur(4px)' : 'none', pointerEvents: pinModalOpen ? 'none' : 'auto' }}>
+      <div
+        style={{
+          filter: pinModalOpen ? "blur(4px)" : "none",
+          pointerEvents: pinModalOpen ? "none" : "auto",
+        }}
+      >
         <TransitionWrapper>
           <Routes>
             <Route path="/" element={<Home />} />

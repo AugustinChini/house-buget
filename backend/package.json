@@ -22,7 +22,12 @@
   "devDependencies": {
     "nodemon": "^3.0.2"
   },
-  "keywords": ["budget", "api", "sqlite", "express"],
+  "keywords": [
+    "budget",
+    "api",
+    "sqlite",
+    "express"
+  ],
   "author": "",
   "license": "MIT"
-} 
+}
