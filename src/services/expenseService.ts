@@ -1,4 +1,11 @@
-import type { Expense, CreateExpenseRequest, UpdateExpenseRequest, ExpenseFilters, ExpenseSummary, MonthlyExpenseSummary } from "../models/Expense";
+import type {
+  Expense,
+  CreateExpenseRequest,
+  UpdateExpenseRequest,
+  ExpenseFilters,
+  ExpenseSummary,
+  MonthlyExpenseSummary,
+} from "../models/Expense";
 import { apiService } from "./apiService";
 import { ensureDate } from "../utils/dateUtils";
 
@@ -7,11 +14,11 @@ class ExpenseService {
   async getAllExpenses(filters?: ExpenseFilters): Promise<Expense[]> {
     const expenses = await apiService.getAllExpenses(filters);
     // Ensure all dates are properly converted to Date objects
-    return expenses.map(expense => ({
+    return expenses.map((expense) => ({
       ...expense,
       date: ensureDate(expense.date),
       createdAt: ensureDate(expense.createdAt),
-      updatedAt: ensureDate(expense.updatedAt)
+      updatedAt: ensureDate(expense.updatedAt),
     }));
   }
 
@@ -19,12 +26,12 @@ class ExpenseService {
   async getExpenseById(id: number): Promise<Expense | null> {
     const expense = await apiService.getExpenseById(id);
     if (!expense) return null;
-    
+
     return {
       ...expense,
       date: ensureDate(expense.date),
       createdAt: ensureDate(expense.createdAt),
-      updatedAt: ensureDate(expense.updatedAt)
+      updatedAt: ensureDate(expense.updatedAt),
     };
   }
 
@@ -35,20 +42,23 @@ class ExpenseService {
       ...expense,
       date: ensureDate(expense.date),
       createdAt: ensureDate(expense.createdAt),
-      updatedAt: ensureDate(expense.updatedAt)
+      updatedAt: ensureDate(expense.updatedAt),
     };
   }
 
   // Update expense
-  async updateExpense(id: number, updateData: UpdateExpenseRequest): Promise<Expense | null> {
+  async updateExpense(
+    id: number,
+    updateData: UpdateExpenseRequest
+  ): Promise<Expense | null> {
     const expense = await apiService.updateExpense(id, updateData);
     if (!expense) return null;
-    
+
     return {
       ...expense,
       date: ensureDate(expense.date),
       createdAt: ensureDate(expense.createdAt),
-      updatedAt: ensureDate(expense.updatedAt)
+      updatedAt: ensureDate(expense.updatedAt),
     };
   }
 
@@ -60,72 +70,85 @@ class ExpenseService {
   // Get expenses by type
   async getExpensesByType(type: "expense" | "income"): Promise<Expense[]> {
     const expenses = await apiService.getExpensesByType(type);
-    return expenses.map(expense => ({
+    return expenses.map((expense) => ({
       ...expense,
       date: ensureDate(expense.date),
       createdAt: ensureDate(expense.createdAt),
-      updatedAt: ensureDate(expense.updatedAt)
+      updatedAt: ensureDate(expense.updatedAt),
     }));
   }
 
   // Get expenses by month
   async getExpensesByMonth(year: number, month: number): Promise<Expense[]> {
     const expenses = await apiService.getExpensesByMonth(year, month);
-    return expenses.map(expense => ({
+    return expenses.map((expense) => ({
       ...expense,
       date: ensureDate(expense.date),
       createdAt: ensureDate(expense.createdAt),
-      updatedAt: ensureDate(expense.updatedAt)
+      updatedAt: ensureDate(expense.updatedAt),
     }));
   }
 
   // Get expenses for a specific date range
-  async getExpensesForDateRange(startDate: Date, endDate: Date): Promise<Expense[]> {
+  async getExpensesForDateRange(
+    startDate: Date,
+    endDate: Date
+  ): Promise<Expense[]> {
     const expenses = await apiService.getAllExpenses({
       dateFrom: startDate,
-      dateTo: endDate
+      dateTo: endDate,
     });
-    return expenses.map(expense => ({
+    return expenses.map((expense) => ({
       ...expense,
       date: ensureDate(expense.date),
       createdAt: ensureDate(expense.createdAt),
-      updatedAt: ensureDate(expense.updatedAt)
+      updatedAt: ensureDate(expense.updatedAt),
     }));
   }
 
   // Get expense summary
-  async getExpenseSummary(filters?: { dateFrom?: Date; dateTo?: Date }): Promise<ExpenseSummary> {
+  async getExpenseSummary(filters?: {
+    dateFrom?: Date;
+    dateTo?: Date;
+  }): Promise<ExpenseSummary> {
     return await apiService.getExpenseSummary(filters);
   }
 
   // Get monthly expense summary
-  async getMonthlyExpenseSummary(year: number, month: number): Promise<MonthlyExpenseSummary> {
-    const expenses = await this.getExpensesByMonth(year, month);
+  async getMonthlyExpenseSummary(
+    year: number,
+    month: number
+  ): Promise<MonthlyExpenseSummary> {
+    const startDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    const expenses = await this.getExpensesForDateRange(startDate, endDate);
     const totalExpenses = expenses
-      .filter(exp => exp.type === "expense")
+      .filter((exp) => exp.type === "expense")
       .reduce((sum, exp) => sum + exp.amount, 0);
     const totalIncome = expenses
-      .filter(exp => exp.type === "income")
+      .filter((exp) => exp.type === "income")
       .reduce((sum, exp) => sum + exp.amount, 0);
 
     return {
-      month: new Date(year, month - 1).toLocaleDateString("fr-FR", { month: "long" }),
+      month: new Date(year, month - 1).toLocaleDateString("fr-FR", {
+        month: "long",
+      }),
       year,
       totalExpenses,
       totalIncome,
       netAmount: totalIncome - totalExpenses,
-      expenses
+      expenses,
     };
   }
 
   // Get recurring expenses
   async getRecurringExpenses(): Promise<Expense[]> {
     const expenses = await apiService.getRecurringExpenses();
-    return expenses.map(expense => ({
+    return expenses.map((expense) => ({
       ...expense,
       date: ensureDate(expense.date),
       createdAt: ensureDate(expense.createdAt),
-      updatedAt: ensureDate(expense.updatedAt)
+      updatedAt: ensureDate(expense.updatedAt),
     }));
   }
 }

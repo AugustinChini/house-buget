@@ -72,7 +72,7 @@ export function ExpensesDetails() {
 
       // Get expenses for selected month
       const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 1);
+      const endDate = new Date(year, month, 0);
 
       const allExpenses = await expenseService.getExpensesForDateRange(
         startDate,
@@ -344,6 +344,7 @@ export function ExpensesDetails() {
                 <TableCell align="center">Actions</TableCell>
                 <TableCell align="right">Montant</TableCell>
                 <TableCell>Titre</TableCell>
+                <TableCell align="right">Montant</TableCell>
                 <TableCell>Catégorie</TableCell>
                 <TableCell>Date</TableCell>
                 <TableCell>Type</TableCell>
