@@ -20,6 +20,7 @@ import {
   Stack,
   Card,
   CardContent,
+  IconButton,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -55,7 +56,10 @@ export function ExpensesDetails() {
   const [typeFilter, setTypeFilter] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
   });
 
   // Load data
@@ -64,12 +68,12 @@ export function ExpensesDetails() {
       setLoading(true);
 
       // Parse selected month
-      const [year, month] = selectedMonth.split('-').map(Number);
+      const [year, month] = selectedMonth.split("-").map(Number);
 
       // Get expenses for selected month
       const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
-      
+      const endDate = new Date(year, month, 1);
+
       const allExpenses = await expenseService.getExpensesForDateRange(
         startDate,
         endDate
@@ -107,8 +111,9 @@ export function ExpensesDetails() {
 
   // Filter expenses
   const filteredExpenses = expenses.filter((expense) => {
-    const matchesSearch =
-      expense.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = expense.title
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
     const matchesCategory =
       !categoryFilter || expense.categoryId.toString() === categoryFilter;
     const matchesType = !typeFilter || expense.type === typeFilter;
@@ -162,10 +167,10 @@ export function ExpensesDetails() {
       const date = new Date(currentYear, currentMonth - i, 1);
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
-      const value = `${year}-${String(month).padStart(2, '0')}`;
-      const label = date.toLocaleDateString('fr-FR', { 
-        year: 'numeric', 
-        month: 'long' 
+      const value = `${year}-${String(month).padStart(2, "0")}`;
+      const label = date.toLocaleDateString("fr-FR", {
+        year: "numeric",
+        month: "long",
       });
       months.push({ value, label });
     }
@@ -336,12 +341,12 @@ export function ExpensesDetails() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Date</TableCell>
+                <TableCell align="center">Actions</TableCell>
+                <TableCell align="right">Montant</TableCell>
                 <TableCell>Titre</TableCell>
                 <TableCell>Catégorie</TableCell>
+                <TableCell>Date</TableCell>
                 <TableCell>Type</TableCell>
-                <TableCell align="right">Montant</TableCell>
-                <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -360,27 +365,33 @@ export function ExpensesDetails() {
               ) : (
                 filteredExpenses.map((expense) => (
                   <TableRow key={expense.id}>
-                    <TableCell>{formatDate(expense.date)}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: "medium" }}>
-                        {expense.title}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getCategoryName(expense.categoryId)}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={
-                          expense.type === "expense" ? "Dépense" : "Revenu"
-                        }
-                        color={expense.type === "expense" ? "error" : "success"}
-                        size="small"
-                      />
+                    <TableCell align="center">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          justifyContent: "center",
+                        }}
+                      >
+                        <IconButton
+                          color="primary"
+                          size="small"
+                          onClick={() => handleEditExpense(expense)}
+                          sx={{ minWidth: "auto", px: 1 }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <Button
+                          color="error"
+                          size="small"
+                          onClick={() =>
+                            handleDeleteExpense(expense.id, expense.title)
+                          }
+                          sx={{ minWidth: "auto", px: 1 }}
+                        >
+                          <DeleteIcon />
+                        </Button>
+                      </Box>
                     </TableCell>
                     <TableCell align="right">
                       <Typography
@@ -399,37 +410,28 @@ export function ExpensesDetails() {
                         })}
                       </Typography>
                     </TableCell>
-                    <TableCell align="center">
-                      <Box
-                        sx={{
-                          display: "flex",
-                          gap: 1,
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          size="small"
-                          startIcon={<EditIcon />}
-                          onClick={() => handleEditExpense(expense)}
-                          sx={{ minWidth: "auto", px: 1 }}
-                        >
-                          Modifier
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          startIcon={<DeleteIcon />}
-                          onClick={() =>
-                            handleDeleteExpense(expense.id, expense.title)
-                          }
-                          sx={{ minWidth: "auto", px: 1 }}
-                        >
-                          Supprimer
-                        </Button>
-                      </Box>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: "medium" }}>
+                        {expense.title}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getCategoryName(expense.categoryId)}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>{formatDate(expense.date)}</TableCell>
+
+                    <TableCell>
+                      <Chip
+                        label={
+                          expense.type === "expense" ? "Dépense" : "Revenu"
+                        }
+                        color={expense.type === "expense" ? "error" : "success"}
+                        size="small"
+                      />
                     </TableCell>
                   </TableRow>
                 ))

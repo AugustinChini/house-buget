@@ -20,6 +20,7 @@ interface CreateExpenseModalProps {
   onClose: () => void;
   categories: Array<{ id: number; name: string }>;
   onSuccess: () => void;
+  initialCategoryId?: number;
 }
 
 // Create Expense Form Component
@@ -27,17 +28,19 @@ interface CreateExpenseFormProps {
   categories: Array<{ id: number; name: string }>;
   onClose: () => void;
   onSuccess: () => void;
+  initialCategoryId?: number;
 }
 
 function CreateExpenseForm({
   categories,
   onClose,
   onSuccess,
+  initialCategoryId,
 }: CreateExpenseFormProps) {
   const [formData, setFormData] = useState({
     title: "",
     amount: "",
-    categoryId: "",
+    categoryId: initialCategoryId ? initialCategoryId.toString() : "",
     type: "expense" as "expense" | "income",
     isRecurring: false,
   });
@@ -98,23 +101,6 @@ function CreateExpenseForm({
         />
 
         <FormControl fullWidth required>
-          <InputLabel>Type</InputLabel>
-          <Select
-            value={formData.type}
-            label="Type"
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                type: e.target.value as "expense" | "income",
-              })
-            }
-          >
-            <MenuItem value="expense">Dépense</MenuItem>
-            <MenuItem value="income">Revenu</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth required>
           <InputLabel>Catégorie</InputLabel>
           <Select
             value={formData.categoryId}
@@ -128,6 +114,23 @@ function CreateExpenseForm({
                 {category.name}
               </MenuItem>
             ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth required>
+          <InputLabel>Type</InputLabel>
+          <Select
+            value={formData.type}
+            label="Type"
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                type: e.target.value as "expense" | "income",
+              })
+            }
+          >
+            <MenuItem value="expense">Dépense</MenuItem>
+            <MenuItem value="income">Revenu</MenuItem>
           </Select>
         </FormControl>
 
@@ -161,6 +164,7 @@ export function CreateExpenseModal({
   onClose,
   categories,
   onSuccess,
+  initialCategoryId,
 }: CreateExpenseModalProps) {
   return (
     <Modal open={open} onClose={onClose} aria-labelledby="create-expense-modal">
@@ -184,6 +188,7 @@ export function CreateExpenseModal({
           categories={categories}
           onClose={onClose}
           onSuccess={onSuccess}
+          initialCategoryId={initialCategoryId}
         />
       </Box>
     </Modal>

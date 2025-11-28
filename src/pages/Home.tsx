@@ -16,11 +16,12 @@ import {
 import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  MoreVert as MoreVertIcon,
+  Add as AddIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { categoryService, expenseService } from "../services";
 import type { CategoryWithSpending } from "../models";
+import { CreateExpenseModal } from "../components/CreateExpenseModal";
 
 export function Home() {
   const navigate = useNavigate();
@@ -34,15 +35,22 @@ export function Home() {
   const [contentVisible, setContentVisible] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
   });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(
+    undefined
+  );
 
   // Load data function
   const loadData = async () => {
     try {
       setLoading(true);
       // Parse selected month
-      const [year, month] = selectedMonth.split('-').map(Number);
+      const [year, month] = selectedMonth.split("-").map(Number);
 
       // Get monthly summary for selected month
       const monthlySummary = await expenseService.getMonthlyExpenseSummary(
@@ -78,9 +86,9 @@ export function Home() {
       loadData();
     };
 
-    window.addEventListener('expenseAdded', handleExpenseAdded);
+    window.addEventListener("expenseAdded", handleExpenseAdded);
     return () => {
-      window.removeEventListener('expenseAdded', handleExpenseAdded);
+      window.removeEventListener("expenseAdded", handleExpenseAdded);
     };
   }, []);
 
@@ -125,10 +133,10 @@ export function Home() {
       const date = new Date(currentYear, currentMonth - i, 1);
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
-      const value = `${year}-${String(month).padStart(2, '0')}`;
-      const label = date.toLocaleDateString('fr-FR', { 
-        year: 'numeric', 
-        month: 'long' 
+      const value = `${year}-${String(month).padStart(2, "0")}`;
+      const label = date.toLocaleDateString("fr-FR", {
+        year: "numeric",
+        month: "long",
       });
       months.push({ value, label });
     }
@@ -245,7 +253,14 @@ export function Home() {
 
             {/* Budget Categories */}
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 3,
+                }}
+              >
                 <Typography variant="h6" gutterBottom>
                   Dépenses par catégorie
                 </Typography>
@@ -304,11 +319,12 @@ export function Home() {
                           <IconButton
                             size="small"
                             sx={{ p: 0.5 }}
-                            onClick={() =>
-                              navigate(`/expenses?category=${category.id}`)
-                            }
+                            onClick={() => {
+                              setSelectedCategoryId(category.id);
+                              setModalOpen(true);
+                            }}
                           >
-                            <MoreVertIcon fontSize="small" />
+                            <AddIcon fontSize="small" />
                           </IconButton>
                         </Box>
 
@@ -389,6 +405,23 @@ export function Home() {
             </Paper>
           </>
         )}
+        {/* Create Expense Modal */}
+        <CreateExpenseModal
+          open={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setSelectedCategoryId(undefined);
+          }}
+          categories={categoriesWithSpending}
+          initialCategoryId={selectedCategoryId}
+          onSuccess={() => {
+            setModalOpen(false);
+            setSelectedCategoryId(undefined);
+            loadData();
+            // Trigger global refresh event if needed
+            window.dispatchEvent(new CustomEvent("expenseAdded"));
+          }}
+        />
       </Container>
     </>
   );

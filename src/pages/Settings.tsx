@@ -12,9 +12,15 @@ import {
   DialogActions,
   Switch,
   FormControlLabel,
+  IconButton,
 } from "@mui/material";
-import { Add as AddIcon, Visibility, VisibilityOff } from "@mui/icons-material";
-import { useState, useEffect } from "react";
+import {
+  Add as AddIcon,
+  Visibility,
+  VisibilityOff,
+  Delete as DeleteIcon,
+} from "@mui/icons-material";
+import { useState, useEffect, useCallback } from "react";
 import { categoryService, dataService } from "../services";
 import type { Category } from "../models";
 
@@ -24,23 +30,16 @@ export function Settings() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryBudget, setNewCategoryBudget] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<{
+    id: number;
+    name: string;
+    budget: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showHiddenCategories, setShowHiddenCategories] = useState(false);
 
-  // Load categories on component mount
-  useEffect(() => {
-    loadCategories();
-  }, [showHiddenCategories]);
-
-  // Animate content when component mounts
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setContentVisible(true);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
       const allCategories = await categoryService.getAllCategories({
@@ -53,7 +52,20 @@ export function Settings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showHiddenCategories]);
+
+  // Load categories on component mount
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  // Animate content when component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setContentVisible(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim() || !newCategoryBudget.trim()) return;
@@ -81,6 +93,44 @@ export function Settings() {
     }
   };
 
+  const handleEditClick = (category: Category) => {
+    setEditingCategory({
+      id: category.id,
+      name: category.name,
+      budget: category.budget.toString(),
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateCategory = async () => {
+    if (
+      !editingCategory ||
+      !editingCategory.name.trim() ||
+      !editingCategory.budget.trim()
+    )
+      return;
+
+    try {
+      const budget = parseFloat(editingCategory.budget);
+      if (isNaN(budget) || budget < 0) {
+        alert("Le budget doit être un nombre positif");
+        return;
+      }
+
+      await categoryService.updateCategory(editingCategory.id, {
+        name: editingCategory.name.trim(),
+        budget,
+      });
+
+      setEditingCategory(null);
+      setEditDialogOpen(false);
+      loadCategories(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating category:", error);
+      alert("Erreur lors de la mise à jour de la catégorie");
+    }
+  };
+
   const handleDeleteCategory = async (categoryId: number) => {
     if (
       window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?")
@@ -95,7 +145,10 @@ export function Settings() {
     }
   };
 
-  const handleToggleCategoryVisibility = async (categoryId: number, currentShow: boolean) => {
+  const handleToggleCategoryVisibility = async (
+    categoryId: number,
+    currentShow: boolean
+  ) => {
     try {
       await categoryService.updateCategory(categoryId, {
         show: !currentShow,
@@ -221,18 +274,20 @@ export function Settings() {
               }}
             >
               <Typography variant="h6" gutterBottom>
-                Gestion des catégories
+                Catégories
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <FormControlLabel
                   control={
                     <Switch
                       checked={showHiddenCategories}
-                      onChange={(e) => setShowHiddenCategories(e.target.checked)}
+                      onChange={(e) =>
+                        setShowHiddenCategories(e.target.checked)
+                      }
                       size="small"
                     />
                   }
-                  label="Afficher les catégories masquées"
+                  label="Afficher"
                 />
                 <Button
                   variant="contained"
@@ -262,10 +317,21 @@ export function Settings() {
                       border: 1,
                       borderColor: "divider",
                       borderRadius: 1,
-                      backgroundColor: category.show ? "background.paper" : "action.hover",
+                      backgroundColor: category.show
+                        ? "background.paper"
+                        : "action.hover",
                     }}
                   >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        cursor: "pointer",
+                        flexGrow: 1,
+                      }}
+                      onClick={() => handleEditClick(category)}
+                    >
                       {category.show ? (
                         <Visibility color="primary" fontSize="small" />
                       ) : (
@@ -274,11 +340,16 @@ export function Settings() {
                       <Typography
                         variant="body2"
                         sx={{
-                          textDecoration: category.show ? "none" : "line-through",
-                          color: category.show ? "text.primary" : "text.secondary",
+                          textDecoration: category.show
+                            ? "none"
+                            : "line-through",
+                          color: category.show
+                            ? "text.primary"
+                            : "text.secondary",
                         }}
                       >
-                        {category.name} - {category.budget.toLocaleString("fr-FR", {
+                        {category.name} -{" "}
+                        {category.budget.toLocaleString("fr-FR", {
                           style: "currency",
                           currency: "EUR",
                         })}
@@ -289,20 +360,25 @@ export function Settings() {
                         control={
                           <Switch
                             checked={category.show}
-                            onChange={() => handleToggleCategoryVisibility(category.id, category.show)}
+                            onChange={() =>
+                              handleToggleCategoryVisibility(
+                                category.id,
+                                category.show
+                              )
+                            }
                             size="small"
                           />
                         }
                         label=""
                       />
-                      <Button
+                      <IconButton
                         size="small"
                         color="error"
-                        variant="outlined"
                         onClick={() => handleDeleteCategory(category.id)}
+                        aria-label="supprimer"
                       >
-                        Supprimer
-                      </Button>
+                        <DeleteIcon />
+                      </IconButton>
                     </Box>
                   </Box>
                 ))}
@@ -313,13 +389,26 @@ export function Settings() {
                 )}
               </Box>
             )}
-            
-            <Box sx={{ mt: 2, p: 1, backgroundColor: "action.hover", borderRadius: 1 }}>
+
+            <Box
+              sx={{
+                mt: 2,
+                p: 1,
+                backgroundColor: "action.hover",
+                borderRadius: 1,
+              }}
+            >
               <Typography variant="caption" color="text.secondary">
-                <Visibility fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
+                <Visibility
+                  fontSize="small"
+                  sx={{ verticalAlign: "middle", mr: 0.5 }}
+                />
                 Catégorie visible
                 {" | "}
-                <VisibilityOff fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
+                <VisibilityOff
+                  fontSize="small"
+                  sx={{ verticalAlign: "middle", mr: 0.5 }}
+                />
                 Catégorie masquée
               </Typography>
             </Box>
@@ -364,6 +453,58 @@ export function Settings() {
               disabled={!newCategoryName.trim() || !newCategoryBudget.trim()}
             >
               Ajouter
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Edit Category Dialog */}
+        <Dialog
+          open={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Modifier la catégorie</DialogTitle>
+          <DialogContent>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
+            >
+              <TextField
+                label="Nom de la catégorie"
+                value={editingCategory?.name || ""}
+                onChange={(e) =>
+                  setEditingCategory((prev) =>
+                    prev ? { ...prev, name: e.target.value } : null
+                  )
+                }
+                fullWidth
+                required
+              />
+              <TextField
+                label="Budget mensuel (€)"
+                value={editingCategory?.budget || ""}
+                onChange={(e) =>
+                  setEditingCategory((prev) =>
+                    prev ? { ...prev, budget: e.target.value } : null
+                  )
+                }
+                fullWidth
+                required
+                type="number"
+                inputProps={{ min: "0", step: "0.01" }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditDialogOpen(false)}>Annuler</Button>
+            <Button
+              onClick={handleUpdateCategory}
+              variant="contained"
+              disabled={
+                !editingCategory?.name.trim() || !editingCategory?.budget.trim()
+              }
+            >
+              Enregistrer
             </Button>
           </DialogActions>
         </Dialog>

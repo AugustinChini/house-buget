@@ -11,6 +11,7 @@ import { BottomNavigationBar } from "./components/BottomNavigation";
 import { CreateExpenseModal } from "./components/CreateExpenseModal";
 import { RecurringExpenseModal } from "./components/RecurringExpenseModal";
 import { PinCodeModal } from "./components/PinCodeModal";
+import { Notes } from "./pages/Notes";
 
 const theme = createTheme({
   palette: {
@@ -48,9 +49,12 @@ function setPinToken() {
 
 function AppContent() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [categories, setCategories] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
   const [recurringModalOpen, setRecurringModalOpen] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(!isPinTokenValid());
+  const [isAtTop, setIsAtTop] = useState(true);
 
   // Load categories for the modal
   useEffect(() => {
@@ -75,7 +79,8 @@ function AppContent() {
   useEffect(() => {
     const checkRecurringExpenses = async () => {
       try {
-        const shouldShow = await recurringExpenseService.shouldShowRecurringModal();
+        const shouldShow =
+          await recurringExpenseService.shouldShowRecurringModal();
         if (shouldShow) {
           setRecurringModalOpen(true);
         }
@@ -83,21 +88,36 @@ function AppContent() {
         console.error("Error checking recurring expenses:", error);
       }
     };
-    
+
     // Wait a bit for the app to initialize before checking
     const timer = setTimeout(checkRecurringExpenses, 1000);
     return () => clearTimeout(timer);
   }, []);
 
+  // Show FAB only when page scroll is at top
+  useEffect(() => {
+    const handleScroll = () => {
+      const top =
+        window.scrollY ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop ||
+        0;
+      setIsAtTop(top === 0);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const handleModalSuccess = () => {
     setModalOpen(false);
     // Trigger a page refresh by dispatching a custom event
-    window.dispatchEvent(new CustomEvent('expenseAdded'));
+    window.dispatchEvent(new CustomEvent("expenseAdded"));
   };
 
   const handleRecurringExpensesCreated = () => {
     // Trigger a page refresh by dispatching a custom event
-    window.dispatchEvent(new CustomEvent('expenseAdded'));
+    window.dispatchEvent(new CustomEvent("expenseAdded"));
   };
 
   const handlePinSuccess = () => {
@@ -107,31 +127,43 @@ function AppContent() {
 
   return (
     <>
-      <PinCodeModal open={pinModalOpen} onSuccess={handlePinSuccess} correctPin={PIN_CODE} />
+      <PinCodeModal
+        open={pinModalOpen}
+        onSuccess={handlePinSuccess}
+        correctPin={PIN_CODE}
+      />
       {/* Le reste de l'app est désactivé tant que le code n'est pas validé */}
-      <div style={{ filter: pinModalOpen ? 'blur(4px)' : 'none', pointerEvents: pinModalOpen ? 'none' : 'auto' }}>
+      <div
+        style={{
+          filter: pinModalOpen ? "blur(4px)" : "none",
+          pointerEvents: pinModalOpen ? "none" : "auto",
+        }}
+      >
         <TransitionWrapper>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/expenses" element={<ExpensesDetails />} />
+            <Route path="/notes" element={<Notes />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </TransitionWrapper>
         {/* Floating Action Button */}
-        <Fab
-          color="primary"
-          aria-label="add"
-          sx={{
-            position: "fixed",
-            bottom: 80,
-            right: 16,
-            zIndex: 9999,
-            transform: "translateZ(0)",
-          }}
-          onClick={() => setModalOpen(true)}
-        >
-          <AddIcon />
-        </Fab>
+        {isAtTop && (
+          <Fab
+            color="primary"
+            aria-label="add"
+            sx={{
+              position: "fixed",
+              bottom: 80,
+              right: 16,
+              zIndex: 9999,
+              transform: "translateZ(0)",
+            }}
+            onClick={() => setModalOpen(true)}
+          >
+            <AddIcon />
+          </Fab>
+        )}
         {/* Create Expense Modal */}
         <CreateExpenseModal
           open={modalOpen}

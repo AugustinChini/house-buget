@@ -5,6 +5,7 @@ import {
   List as ListIcon,
   Settings as SettingsIcon,
 } from "@mui/icons-material";
+import { Note as NoteIcon } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export function BottomNavigationBar() {
@@ -21,11 +22,23 @@ export function BottomNavigationBar() {
       case "/expenses":
         setValue(1);
         break;
-      case "/settings":
+      case "/notes":
         setValue(2);
         break;
+      case "/settings":
+        setValue(3);
+        break;
       default:
-        setValue(0);
+        // Check if the path starts with any of the known paths
+        if (location.pathname.startsWith("/expenses")) {
+          setValue(1);
+        } else if (location.pathname.startsWith("/notes")) {
+          setValue(2);
+        } else if (location.pathname.startsWith("/settings")) {
+          setValue(3);
+        } else {
+          setValue(0);
+        }
     }
   }, [location.pathname]);
 
@@ -39,6 +52,9 @@ export function BottomNavigationBar() {
         navigate("/expenses");
         break;
       case 2:
+        navigate("/notes");
+        break;
+      case 3:
         navigate("/settings");
         break;
     }
@@ -84,6 +100,15 @@ export function BottomNavigationBar() {
         <BottomNavigationAction
           label="Dépenses"
           icon={<ListIcon />}
+          sx={{
+            "&.Mui-selected": {
+              color: "primary.main",
+            },
+          }}
+        />
+        <BottomNavigationAction
+          label="Notes"
+          icon={<NoteIcon />}
           sx={{
             "&.Mui-selected": {
               color: "primary.main",
