@@ -44,9 +44,9 @@ export function Notes() {
 
   const onSave = async () => {
     if (id === null) {
-      noteService.createNote(value);
+      await noteService.createNote(value);
     } else {
-      noteService.updateNote(id, value);
+      await noteService.updateNote(id, value);
     }
     const newNotes = await noteService.getAllNotes();
     setFilteredNotes(newNotes);
@@ -128,7 +128,9 @@ export function Notes() {
                             variant="body2"
                             sx={{ fontWeight: "medium" }}
                           >
-                            {note.content}
+                            {note.content.length > 20
+                              ? `${note.content.substring(0, 20)}...`
+                              : note.content}
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
