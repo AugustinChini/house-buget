@@ -2,8 +2,7 @@ import type { Category } from "../models/Category";
 import type { Expense } from "../models/Expense";
 import type { Note } from "../models/Note";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 class ApiService {
   private async request<T>(

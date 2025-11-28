@@ -549,7 +549,7 @@ export function Settings() {
               À propos
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Mon Budget v1.0.0
+              Mon Budget v1.0.2
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Application de gestion de budget personnelle

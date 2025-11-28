@@ -10,7 +10,7 @@ const expenseRoutes = require("./routes/expenses");
 const notesRoutes = require("./routes/notes");
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(helmet());
@@ -20,12 +20,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use("/api/categories", categoryRoutes);
-app.use("/api/expenses", expenseRoutes);
-app.use("/api/notes", notesRoutes);
+app.use("/categories", categoryRoutes);
+app.use("/expenses", expenseRoutes);
+app.use("/notes", notesRoutes);
 
 // Health check endpoint
-app.get("/api/health", (req, res) => {
+app.get("/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
@@ -45,5 +45,5 @@ app.use("*", (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/api/health`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
 });

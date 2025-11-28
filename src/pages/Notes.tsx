@@ -71,7 +71,7 @@ export function Notes() {
       >
         <Box sx={{ flex: 1 }}>
           <Paper sx={{ p: 3, textAlign: "center" }}>
-            <Typography variant="h6">Créer une nouvelle note</Typography>
+            <Typography variant="h6">Mes notes</Typography>
             <TextField
               multiline
               value={value}
@@ -98,7 +98,7 @@ export function Notes() {
           </Paper>
 
           {/* Note Table */}
-          <Paper>
+          <Paper sx={{ mt: 1 }}>
             <TableContainer>
               <Table id={`${id || "none"}`}>
                 <TableHead>

@@ -20,6 +20,9 @@ import {
   Stack,
   Card,
   CardContent,
+  Divider,
+  Avatar,
+  Collapse,
   IconButton,
 } from "@mui/material";
 import {
@@ -28,6 +31,11 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  TrendingDown as TrendingDownIcon,
+  TrendingUp as TrendingUpIcon,
+  AccountBalanceWallet as WalletIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from "@mui/icons-material";
 import { useSearchParams } from "react-router-dom";
 import { expenseService, categoryService } from "../services";
@@ -47,6 +55,7 @@ export function ExpensesDetails() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   const [contentVisible, setContentVisible] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -200,91 +209,173 @@ export function ExpensesDetails() {
       }}
     >
       {/* Summary Cards */}
-      <Box
+      <Card
         sx={{
-          display: "flex",
-          gap: 3,
           mb: 3,
-          flexDirection: { xs: "column", md: "row" },
+          color: "common.white",
+          background: "linear-gradient(135deg, #001576 0%, #d2a6ff 100%)",
+          boxShadow: 4,
         }}
       >
-        <Box sx={{ flex: 1 }}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Total Dépenses
-              </Typography>
-              <Typography variant="h4" color="error.main">
-                {totalExpenses.toLocaleString("fr-FR", {
-                  style: "currency",
-                  currency: "EUR",
-                })}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Total Revenus
-              </Typography>
-              <Typography variant="h4" color="success.main">
-                {totalIncome.toLocaleString("fr-FR", {
-                  style: "currency",
-                  currency: "EUR",
-                })}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Solde Net
-              </Typography>
-              <Typography
-                variant="h4"
-                color={
-                  totalIncome - totalExpenses >= 0
-                    ? "success.main"
-                    : "error.main"
-                }
+        <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={{ xs: 2, md: 3 }}
+            divider={
+              <Divider
+                flexItem
+                orientation="vertical"
+                sx={{
+                  borderColor: "rgba(255,255,255,0.2)",
+                  display: { xs: "none", md: "block" },
+                }}
+              />
+            }
+          >
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}
+            >
+              <Avatar
+                sx={{
+                  bgcolor: "error.main",
+                  color: "common.white",
+                  width: 44,
+                  height: 44,
+                }}
               >
-                {(totalIncome - totalExpenses).toLocaleString("fr-FR", {
-                  style: "currency",
-                  currency: "EUR",
-                })}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
-      </Box>
+                <TrendingDownIcon />
+              </Avatar>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "rgba(255,255,255,0.85)" }}
+                  gutterBottom
+                >
+                  Total Dépenses
+                </Typography>
+                <Typography
+                  variant="h5"
+                  sx={{ fontWeight: 700, color: "error.light" }}
+                >
+                  {totalExpenses.toLocaleString("fr-FR", {
+                    style: "currency",
+                    currency: "EUR",
+                  })}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}
+            >
+              <Avatar
+                sx={{
+                  bgcolor: "success.main",
+                  color: "common.white",
+                  width: 44,
+                  height: 44,
+                }}
+              >
+                <TrendingUpIcon />
+              </Avatar>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "rgba(255,255,255,0.85)" }}
+                  gutterBottom
+                >
+                  Total Revenus
+                </Typography>
+                <Typography
+                  variant="h5"
+                  sx={{ fontWeight: 700, color: "success.light" }}
+                >
+                  {totalIncome.toLocaleString("fr-FR", {
+                    style: "currency",
+                    currency: "EUR",
+                  })}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}
+            >
+              <Avatar
+                sx={{
+                  bgcolor:
+                    totalIncome - totalExpenses >= 0
+                      ? "success.dark"
+                      : "error.dark",
+                  color: "common.white",
+                  width: 44,
+                  height: 44,
+                }}
+              >
+                <WalletIcon />
+              </Avatar>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "rgba(255,255,255,0.85)" }}
+                  gutterBottom
+                >
+                  Solde Net
+                </Typography>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 700,
+                    color:
+                      totalIncome - totalExpenses >= 0
+                        ? "success.light"
+                        : "error.light",
+                  }}
+                >
+                  {(totalIncome - totalExpenses).toLocaleString("fr-FR", {
+                    style: "currency",
+                    currency: "EUR",
+                  })}
+                </Typography>
+              </Box>
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography
-          variant="h6"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center", mb: 2 }}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 2,
+          }}
         >
-          <FilterListIcon sx={{ mr: 1 }} />
-          Filtres
-        </Typography>
+          <Typography
+            variant="h6"
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            <FilterListIcon sx={{ mr: 1 }} />
+            Filtres
+          </Typography>
+          <Button
+            size="small"
+            color="primary"
+            onClick={() => setFiltersOpen((prev) => !prev)}
+            startIcon={<FilterListIcon />}
+            endIcon={filtersOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            aria-expanded={filtersOpen}
+            aria-controls="advanced-filters"
+          >
+            {filtersOpen ? "Moins de filtres" : "Plus de filtres"}
+          </Button>
+        </Box>
+
+        {/* Always visible: Month selector */}
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-          <TextField
-            label="Rechercher"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ flex: 1 }}
-            InputProps={{
-              startAdornment: (
-                <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
-              ),
-            }}
-          />
-          <FormControl sx={{ minWidth: 150 }}>
+          <FormControl sx={{ minWidth: 200, maxWidth: 320 }}>
             <InputLabel>Mois</InputLabel>
             <Select
               value={selectedMonth}
@@ -298,41 +389,64 @@ export function ExpensesDetails() {
               ))}
             </Select>
           </FormControl>
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>Catégorie</InputLabel>
-            <Select
-              value={categoryFilter}
-              label="Catégorie"
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <MenuItem value="">Toutes</MenuItem>
-              {categories.map((category) => (
-                <MenuItem key={category.id} value={category.id.toString()}>
-                  {category.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>Type</InputLabel>
-            <Select
-              value={typeFilter}
-              label="Type"
-              onChange={(e) => setTypeFilter(e.target.value)}
-            >
-              <MenuItem value="">Tous</MenuItem>
-              <MenuItem value="expense">Dépense</MenuItem>
-              <MenuItem value="income">Revenu</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setModalOpen(true)}
-          >
-            Ajouter
-          </Button>
         </Stack>
+
+        {/* Collapsible: other filters */}
+        <Collapse in={filtersOpen} timeout="auto" unmountOnExit>
+          <Stack
+            id="advanced-filters"
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            sx={{ mt: 2 }}
+          >
+            <TextField
+              label="Rechercher"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ flex: 1 }}
+              InputProps={{
+                startAdornment: (
+                  <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
+                ),
+              }}
+            />
+            <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel>Catégorie</InputLabel>
+              <Select
+                value={categoryFilter}
+                label="Catégorie"
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <MenuItem value="">Toutes</MenuItem>
+                {categories.map((category) => (
+                  <MenuItem key={category.id} value={category.id.toString()}>
+                    {category.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={typeFilter}
+                label="Type"
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                <MenuItem value="">Tous</MenuItem>
+                <MenuItem value="expense">Dépense</MenuItem>
+                <MenuItem value="income">Revenu</MenuItem>
+              </Select>
+            </FormControl>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setModalOpen(true)}
+              sx={{ whiteSpace: "nowrap" }}
+            >
+              Ajouter
+            </Button>
+          </Stack>
+        </Collapse>
       </Paper>
 
       {/* Expenses Table */}

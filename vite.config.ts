@@ -19,12 +19,12 @@ export default defineConfig({
         scope: ".",
         icons: [
           {
-            src: "/avatar.png",
+            src: "/vite.svg",
             sizes: "192x192",
             type: "image/png",
           },
           {
-            src: "/avatar.png",
+            src: "/vite.svg",
             sizes: "512x512",
             type: "image/png",
           },

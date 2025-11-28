@@ -18,8 +18,8 @@ import {
   TrendingDown as TrendingDownIcon,
   Add as AddIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
 import { categoryService, expenseService } from "../services";
+import { useNavigate } from "react-router-dom";
 import type { CategoryWithSpending } from "../models";
 import { CreateExpenseModal } from "../components/CreateExpenseModal";
 
@@ -41,9 +41,9 @@ export function Home() {
     )}`;
   });
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(
-    undefined
-  );
+  const [selectedCategoryId, setSelectedCategoryId] = useState<
+    number | undefined
+  >(undefined);
 
   // Load data function
   const loadData = async () => {
@@ -262,7 +262,7 @@ export function Home() {
                 }}
               >
                 <Typography variant="h6" gutterBottom>
-                  Dépenses par catégorie
+                  Dépenses
                 </Typography>
                 <FormControl sx={{ minWidth: 150 }}>
                   <InputLabel>Mois</InputLabel>
@@ -312,7 +312,14 @@ export function Home() {
                         >
                           <Typography
                             variant="h6"
-                            sx={{ fontWeight: "bold", color: "#333" }}
+                            sx={{
+                              fontWeight: "bold",
+                              color: "#333",
+                              cursor: "pointer",
+                            }}
+                            onClick={() =>
+                              navigate(`/expenses?category=${category.id}`)
+                            }
                           >
                             {category.name}
                           </Typography>
