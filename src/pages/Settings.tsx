@@ -24,6 +24,8 @@ import { useState, useEffect, useCallback } from "react";
 import { categoryService, dataService } from "../services";
 import type { Category } from "../models";
 
+const MONTHLY_INCOME_STORAGE_KEY = "monthlyIncome";
+
 export function Settings() {
   const [contentVisible, setContentVisible] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -38,6 +40,7 @@ export function Settings() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showHiddenCategories, setShowHiddenCategories] = useState(false);
+  const [monthlyIncome, setMonthlyIncome] = useState("");
 
   const loadCategories = useCallback(async () => {
     try {
@@ -66,6 +69,32 @@ export function Settings() {
     }, 100);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const storedIncome = localStorage.getItem(MONTHLY_INCOME_STORAGE_KEY);
+    if (storedIncome) {
+      setMonthlyIncome(storedIncome);
+    }
+  }, []);
+
+  const handleMonthlyIncomeChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = event.target.value;
+    setMonthlyIncome(value);
+    localStorage.setItem(MONTHLY_INCOME_STORAGE_KEY, value);
+  };
+
+  const formatCurrency = (value: number) =>
+    value.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+
+  const totalCategoryBudget = categories.reduce(
+    (sum, category) => sum + (category.budget ?? 0),
+    0
+  );
+  const monthlyIncomeValue = parseFloat(monthlyIncome) || 0;
+  const remainingBudget = monthlyIncomeValue - totalCategoryBudget;
+  const remainingColor = remainingBudget >= 0 ? "success.main" : "error.main";
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim() || !newCategoryBudget.trim()) return;
@@ -262,6 +291,22 @@ export function Settings() {
           Paramètres de l'application
         </Typography>
 
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Revenu mensuel
+            </Typography>
+            <TextField
+              label="Montant total des revenus (€)"
+              value={monthlyIncome}
+              onChange={handleMonthlyIncomeChange}
+              type="number"
+              inputProps={{ min: "0", step: "0.01" }}
+              fullWidth
+            />
+          </CardContent>
+        </Card>
+
         {/* Category Management */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
@@ -389,6 +434,55 @@ export function Settings() {
                 )}
               </Box>
             )}
+
+            <Box
+              sx={{
+                mt: 2,
+                pt: 2,
+                borderTop: 1,
+                borderColor: "divider",
+                display: "flex",
+                flexDirection: "column",
+                gap: 1,
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Total des catégories
+                </Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  {formatCurrency(totalCategoryBudget)}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: "action.hover",
+                  borderRadius: 1,
+                  px: 1,
+                  py: 0.5,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Revenu - catégories
+                </Typography>
+                <Typography
+                  variant="body1"
+                  fontWeight={600}
+                  color={remainingColor}
+                >
+                  {formatCurrency(remainingBudget)}
+                </Typography>
+              </Box>
+            </Box>
 
             <Box
               sx={{
@@ -549,7 +643,7 @@ export function Settings() {
               À propos
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Mon Budget v1.0.2
+              Mon Budget v1.0.3
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Application de gestion de budget personnelle

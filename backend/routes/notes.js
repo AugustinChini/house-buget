@@ -1,7 +1,39 @@
 const express = require("express");
 const { runQuery, getQuery, allQuery } = require("../database");
+const {
+  syncNoteAttachments,
+  deleteNoteAttachments,
+} = require("../utils/attachmentStorage");
 
 const router = express.Router();
+const NOTE_CONTENT_VERSION = 2;
+
+const parseContent = (rawContent) => {
+  if (!rawContent) {
+    return { version: NOTE_CONTENT_VERSION, html: "", attachments: [] };
+  }
+
+  try {
+    const parsed = JSON.parse(rawContent);
+    return {
+      version:
+        typeof parsed.version === "number"
+          ? parsed.version
+          : NOTE_CONTENT_VERSION,
+      html: typeof parsed.html === "string" ? parsed.html : "",
+      attachments: Array.isArray(parsed.attachments) ? parsed.attachments : [],
+    };
+  } catch {
+    return { version: NOTE_CONTENT_VERSION, html: rawContent, attachments: [] };
+  }
+};
+
+const serializeContent = (content) =>
+  JSON.stringify({
+    version: content.version || NOTE_CONTENT_VERSION,
+    html: content.html || "",
+    attachments: content.attachments || [],
+  });
 
 // GET /api/notes - Get all notes
 router.get("/", async (req, res) => {
@@ -21,13 +53,13 @@ router.get("/", async (req, res) => {
   }
 });
 
-// PUT /api/expenses/:id - Update expense
+// PUT /api/notes/:id - Update note
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
 
-    // Check if expense exists
+    // Check if note exists
     const existingNote = await getQuery("SELECT * FROM notes WHERE id = ?", [
       id,
     ]);
@@ -35,22 +67,18 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    // Build update query dynamically
-    const updates = [];
-    const params = [];
+    const existingContent = parseContent(existingNote.content);
+    const nextContent = parseContent(content ?? existingNote.content);
+    const syncedAttachments = await syncNoteAttachments(
+      id,
+      nextContent.attachments || [],
+      existingContent.attachments || []
+    );
+    nextContent.attachments = syncedAttachments;
 
-    if (content !== undefined) {
-      updates.push("content = ?");
-      params.push(content);
-    }
+    const sql = `UPDATE notes SET content = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`;
+    await runQuery(sql, [serializeContent(nextContent), id]);
 
-    updates.push("updatedAt = CURRENT_TIMESTAMP");
-    params.push(id);
-
-    const sql = `UPDATE notes SET ${updates.join(", ")} WHERE id = ?`;
-    await runQuery(sql, params);
-
-    // Get the updated note
     const updatedNote = await getQuery(
       `SELECT 
         *
@@ -76,13 +104,35 @@ router.put("/:id", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const { content } = req.body;
+    const parsedContent = parseContent(content);
 
     const sql = `
       INSERT INTO notes (content, createdAt, updatedAt)
       VALUES (?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
     `;
 
-    const result = await runQuery(sql, [content]);
+    const initialContent = serializeContent({
+      ...parsedContent,
+      attachments: [],
+    });
+
+    const result = await runQuery(sql, [initialContent]);
+    const syncedAttachments = await syncNoteAttachments(
+      result.id,
+      parsedContent.attachments || [],
+      []
+    );
+
+    if (syncedAttachments.length > 0) {
+      const updatedContent = serializeContent({
+        ...parsedContent,
+        attachments: syncedAttachments,
+      });
+      await runQuery(
+        "UPDATE notes SET content = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?",
+        [updatedContent, result.id]
+      );
+    }
 
     // Get the created note
     const newNote = await getQuery("SELECT * FROM notes WHERE id = ?", [
@@ -114,6 +164,9 @@ router.delete("/:id", async (req, res) => {
     if (!existingNote) {
       return res.status(404).json({ error: "Note not found" });
     }
+
+    const content = parseContent(existingNote.content);
+    await deleteNoteAttachments(content.attachments || []);
 
     await runQuery("DELETE FROM notes WHERE id = ?", [id]);
 

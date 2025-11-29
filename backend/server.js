@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const path = require("path");
+const fs = require("fs");
 require("dotenv").config();
 
 const categoryRoutes = require("./routes/categories");
@@ -11,13 +12,29 @@ const notesRoutes = require("./routes/notes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JSON_BODY_LIMIT = process.env.JSON_BODY_LIMIT || "10mb";
+const uploadsPath = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
 
 // Middleware
 app.use(helmet());
 app.use(cors());
 app.use(morgan("combined"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(
+  express.json({
+    limit: JSON_BODY_LIMIT,
+  })
+);
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: JSON_BODY_LIMIT,
+  })
+);
+app.use("/uploads", express.static(uploadsPath));
 
 // Routes
 app.use("/categories", categoryRoutes);

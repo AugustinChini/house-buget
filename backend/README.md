@@ -43,16 +43,19 @@ A Node.js REST API backend for the Budget App, built with Express.js and SQLite.
 ## Installation
 
 1. Navigate to the backend directory:
+
    ```bash
    cd backend
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Initialize the database with sample data:
+
    ```bash
    npm run init-db
    ```
@@ -73,11 +76,14 @@ cp env.example .env
 ```
 
 Available variables:
+
 - `PORT` - Server port (default: 3001)
+- `JSON_BODY_LIMIT` - Maximum size accepted by `express.json`/`urlencoded` (default: 10mb)
 
 ## Database Schema
 
 ### Categories Table
+
 - `id` - Primary key (auto-increment)
 - `name` - Category name
 - `budget` - Monthly budget amount
@@ -89,6 +95,7 @@ Available variables:
 - `updatedAt` - Last update timestamp
 
 ### Expenses Table
+
 - `id` - Primary key (auto-increment)
 - `title` - Expense title
 - `amount` - Expense amount
@@ -105,6 +112,7 @@ Available variables:
 ## API Usage Examples
 
 ### Create a Category
+
 ```bash
 curl -X POST http://localhost:3001/api/categories \
   -H "Content-Type: application/json" \
@@ -118,6 +126,7 @@ curl -X POST http://localhost:3001/api/categories \
 ```
 
 ### Create an Expense
+
 ```bash
 curl -X POST http://localhost:3001/api/expenses \
   -H "Content-Type: application/json" \
@@ -133,11 +142,13 @@ curl -X POST http://localhost:3001/api/expenses \
 ```
 
 ### Get Expenses with Filtering
+
 ```bash
 curl "http://localhost:3001/api/expenses?categoryId=1&type=expense&dateFrom=2024-01-01&dateTo=2024-01-31"
 ```
 
 ### Get Expense Summary
+
 ```bash
 curl "http://localhost:3001/api/expenses/summary?dateFrom=2024-01-01&dateTo=2024-01-31"
 ```
@@ -145,17 +156,21 @@ curl "http://localhost:3001/api/expenses/summary?dateFrom=2024-01-01&dateTo=2024
 ## Development
 
 ### Running in Development Mode
+
 ```bash
 npm run dev
 ```
 
 ### Running in Production Mode
+
 ```bash
 npm start
 ```
 
 ### Database Reset
+
 To reset the database and reinitialize with sample data:
+
 ```bash
 rm data/budget.db
 npm run init-db
@@ -172,6 +187,7 @@ The API returns appropriate HTTP status codes and error messages:
 - `500` - Internal Server Error
 
 Error responses include a descriptive message:
+
 ```json
 {
   "error": "Category not found"
@@ -191,4 +207,4 @@ The API is configured to accept requests from any origin in development. For pro
 
 ## License
 
-MIT 
+MIT

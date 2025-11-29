@@ -2,7 +2,6 @@ import {
   Box,
   Container,
   Paper,
-  TextField,
   Typography,
   Button,
   TableContainer,
@@ -12,17 +11,74 @@ import {
   TableCell,
   TableBody,
   IconButton,
+  Stack,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
-import { Delete as DeleteIcon } from "@mui/icons-material";
-import { useEffect, useState } from "react";
-import type { Note } from "../models/Note";
+import {
+  Delete as DeleteIcon,
+  AttachFile as AttachFileIcon,
+  Download as DownloadIcon,
+} from "@mui/icons-material";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import type { Note, NoteAttachment } from "../models/Note";
 import { noteService } from "../services/notesService";
+import { RichTextEditor } from "../components/RichTextEditor";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+const extractPlainText = (html: string) =>
+  html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getNotePreview = (html: string, maxLength = 80) => {
+  const text = extractPlainText(html);
+  if (text.length <= maxLength) return text;
+  return `${text.substring(0, maxLength)}…`;
+};
+
+const formatBytes = (size: number | undefined) => {
+  if (!size) return "0 o";
+  const units = ["o", "Ko", "Mo", "Go"];
+  const index = Math.floor(Math.log(size) / Math.log(1024));
+  const value = size / Math.pow(1024, index);
+  const decimals = index === 0 ? 0 : 1;
+  return `${value.toFixed(decimals)} ${units[index]}`;
+};
+
+const getAttachmentDownloadHref = (attachment: NoteAttachment) => {
+  if (attachment.dataUrl) return attachment.dataUrl;
+  if (attachment.url) {
+    if (attachment.url.startsWith("http")) return attachment.url;
+    return `${API_BASE_URL}${attachment.url}`;
+  }
+  return undefined;
+};
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 
 export function Notes() {
   const [id, setId] = useState<number | null>(null);
   const [value, setValue] = useState("");
+  const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const selectedNote = useMemo(
+    () => (id === null ? null : filteredNotes.find((n) => n.id === id) || null),
+    [id, filteredNotes]
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -35,27 +91,90 @@ export function Notes() {
   }, []);
 
   useEffect(() => {
-    setValue(() => {
-      if (id === null) return "";
-      const selectedNote = filteredNotes.find((n) => n.id === id);
-      return selectedNote?.content || "";
-    });
-  }, [id, filteredNotes]);
+    if (!selectedNote) {
+      setValue("");
+      setAttachments([]);
+      return;
+    }
+    setValue(selectedNote.content || "");
+    setAttachments(selectedNote.attachments || []);
+  }, [selectedNote]);
+
+  const resetEditor = () => {
+    setId(null);
+    setValue("");
+    setAttachments([]);
+  };
+
+  const handleFilesSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    try {
+      const preparedAttachments = await Promise.all(
+        Array.from(files).map(async (file) => ({
+          id: crypto.randomUUID(),
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          dataUrl: await readFileAsDataUrl(file),
+        }))
+      );
+
+      setAttachments((prev) => [...prev, ...preparedAttachments]);
+    } catch (error) {
+      console.error("Impossible de lire les fichiers sélectionnés.", error);
+    } finally {
+      // Reset input to allow selecting same files twice
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveAttachment = (attachmentId: string) => {
+    setAttachments((prev) =>
+      prev.filter((attachment) => attachment.id !== attachmentId)
+    );
+  };
 
   const onSave = async () => {
-    if (id === null) {
-      await noteService.createNote(value);
-    } else {
-      await noteService.updateNote(id, value);
+    setIsSaving(true);
+    try {
+      const payload = { content: value, attachments };
+      const savedNote =
+        id === null
+          ? await noteService.createNote(payload)
+          : await noteService.updateNote(id, payload);
+
+      const newNotes = await noteService.getAllNotes();
+      setFilteredNotes(newNotes);
+
+      if (savedNote) {
+        setId(savedNote.id);
+        setValue(savedNote.content || "");
+        setAttachments(savedNote.attachments || []);
+      } else {
+        resetEditor();
+      }
+    } finally {
+      setIsSaving(false);
     }
-    const newNotes = await noteService.getAllNotes();
-    setFilteredNotes(newNotes);
   };
 
   const handleDeleteNote = async (id: number) => {
     await noteService.deleteNote(id);
     const newList = await noteService.getAllNotes();
     setFilteredNotes(newList);
+    if (id === selectedNote?.id) {
+      resetEditor();
+    }
+  };
+
+  const handleSelectNote = (noteId: number) => {
+    setId(noteId);
+  };
+
+  const handleAttachmentButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -71,15 +190,107 @@ export function Notes() {
       >
         <Box sx={{ flex: 1 }}>
           <Paper sx={{ p: 3, textAlign: "center" }}>
-            <Typography variant="h6">Mes notes</Typography>
-            <TextField
-              multiline
-              value={value}
-              onChange={(v) => setValue(v?.target?.value || "")}
+            <Box sx={{ mt: 2, textAlign: "left" }}>
+              <RichTextEditor
+                value={value}
+                onChange={setValue}
+                placeholder="Commencez à écrire votre note..."
+                minHeight={220}
+              />
+            </Box>
+
+            <Box
               sx={{
-                width: "100%",
+                mt: 3,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+                p: 2,
+                textAlign: "left",
               }}
-            ></TextField>
+            >
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                spacing={2}
+              >
+                <Typography variant="subtitle1">Pièces jointes</Typography>
+                <IconButton size="large" onClick={handleAttachmentButtonClick}>
+                  <AttachFileIcon />
+                </IconButton>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={handleFilesSelected}
+                />
+              </Stack>
+
+              {attachments.length === 0 ? (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 1 }}
+                >
+                  Aucune pièce jointe
+                </Typography>
+              ) : (
+                <List dense sx={{ mt: 1 }}>
+                  {attachments.map((attachment) => (
+                    <ListItem
+                      key={attachment.id}
+                      disablePadding
+                      sx={{ py: 0.5, pl: 0 }}
+                      secondaryAction={
+                        <Stack direction="row" spacing={1}>
+                          {(() => {
+                            const downloadHref =
+                              getAttachmentDownloadHref(attachment);
+                            return downloadHref ? (
+                              <IconButton
+                                component="a"
+                                href={downloadHref}
+                                download={attachment.name}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                size="small"
+                              >
+                                <DownloadIcon fontSize="small" />
+                              </IconButton>
+                            ) : (
+                              <IconButton size="small" disabled>
+                                <DownloadIcon fontSize="small" />
+                              </IconButton>
+                            );
+                          })()}
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() =>
+                              handleRemoveAttachment(attachment.id)
+                            }
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      }
+                    >
+                      <ListItemText
+                        primaryTypographyProps={{ variant: "body2" }}
+                        secondaryTypographyProps={{ variant: "caption" }}
+                        primary={attachment.name}
+                        secondary={`${
+                          attachment.type || "Fichier"
+                        } · ${formatBytes(attachment.size)}`}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </Box>
+
             <Box
               sx={{
                 display: "flex",
@@ -88,10 +299,14 @@ export function Notes() {
                 marginTop: 2,
               }}
             >
-              <Button variant="outlined" onClick={() => setId(null)}>
+              <Button
+                variant="outlined"
+                onClick={resetEditor}
+                disabled={isSaving}
+              >
                 Annuler
               </Button>
-              <Button onClick={onSave} variant="contained">
+              <Button onClick={onSave} variant="contained" disabled={isSaving}>
                 Enregistrer
               </Button>
             </Box>
@@ -123,15 +338,24 @@ export function Notes() {
                   ) : (
                     filteredNotes.map((note) => (
                       <TableRow key={note.id}>
-                        <TableCell onClick={() => setId(note.id)}>
+                        <TableCell onClick={() => handleSelectNote(note.id)}>
                           <Typography
                             variant="body2"
                             sx={{ fontWeight: "medium" }}
                           >
-                            {note.content.length > 20
-                              ? `${note.content.substring(0, 20)}...`
-                              : note.content}
+                            {getNotePreview(note.content)}
                           </Typography>
+                          {note.attachments && note.attachments.length > 0 && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ display: "block" }}
+                            >
+                              {note.attachments.length} pièce
+                              {note.attachments.length > 1 ? "s" : ""} jointe
+                              {note.attachments.length > 1 ? "s" : ""}
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell align="center">
                           <Box
