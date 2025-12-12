@@ -5,9 +5,14 @@ const { randomUUID } = require("crypto");
 
 const uploadsRoot = path.join(__dirname, "..", "uploads");
 const notesRoot = path.join(uploadsRoot, "notes");
+const tempRoot = path.join(uploadsRoot, "temp");
 
 if (!fs.existsSync(notesRoot)) {
   fs.mkdirSync(notesRoot, { recursive: true });
+}
+
+if (!fs.existsSync(tempRoot)) {
+  fs.mkdirSync(tempRoot, { recursive: true });
 }
 
 const decodeDataUrl = (dataUrl) => {
@@ -73,6 +78,38 @@ const deleteAttachmentFile = async (storagePath) => {
   }
 };
 
+const moveFromTemp = async (noteId, attachment) => {
+  if (!attachment.storagePath || !attachment.isTemp) {
+    return attachment;
+  }
+
+  const tempPath = path.join(uploadsRoot, attachment.storagePath);
+
+  // Check if temp file exists
+  try {
+    await fsp.access(tempPath);
+  } catch {
+    throw new Error(`Temp file not found: ${attachment.storagePath}`);
+  }
+
+  const dirPath = await ensureNoteDir(noteId);
+  const fileName = path.basename(attachment.storagePath);
+  const newRelativePath = buildRelativePath(noteId, fileName);
+  const newAbsolutePath = path.join(dirPath, fileName);
+
+  // Move file from temp to notes directory
+  await fsp.rename(tempPath, newAbsolutePath);
+
+  return {
+    id: attachment.id,
+    name: attachment.name,
+    type: attachment.type,
+    size: attachment.size,
+    url: buildUrlFromRelativePath(newRelativePath),
+    storagePath: newRelativePath,
+  };
+};
+
 const syncNoteAttachments = async (noteId, incoming = [], existing = []) => {
   const existingMap = new Map(
     existing.filter((att) => att?.id).map((att) => [att.id, att])
@@ -85,14 +122,29 @@ const syncNoteAttachments = async (noteId, incoming = [], existing = []) => {
       ? existingMap.get(attachment.id)
       : undefined;
 
-    if (attachment.dataUrl) {
+    // Case 1: New file uploaded via multipart (isTemp flag)
+    if (attachment.isTemp && attachment.storagePath) {
+      if (existingAttachment?.storagePath) {
+        await deleteAttachmentFile(existingAttachment.storagePath);
+      }
+      const moved = await moveFromTemp(noteId, attachment);
+      nextAttachments.push(moved);
+    }
+    // Case 2: Legacy base64 dataUrl upload
+    else if (attachment.dataUrl) {
       if (existingAttachment?.storagePath) {
         await deleteAttachmentFile(existingAttachment.storagePath);
       }
       const stored = await saveAttachmentFile(noteId, attachment);
       nextAttachments.push(stored);
-    } else if (existingAttachment) {
+    }
+    // Case 3: Existing attachment (no changes)
+    else if (existingAttachment) {
       nextAttachments.push(existingAttachment);
+    }
+    // Case 4: Already finalized attachment (has storagePath in notes/)
+    else if (attachment.storagePath && !attachment.isTemp) {
+      nextAttachments.push(attachment);
     }
   }
 

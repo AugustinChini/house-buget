@@ -44,6 +44,14 @@ const sanitizeAttachments = (attachments: NoteAttachment[] = []) =>
       sanitized.url = attachment.url;
     }
 
+    if (attachment.storagePath) {
+      sanitized.storagePath = attachment.storagePath;
+    }
+
+    if (attachment.isTemp) {
+      sanitized.isTemp = attachment.isTemp;
+    }
+
     return sanitized;
   });
 

@@ -5,6 +5,10 @@ export interface NoteAttachment {
   size: number;
   dataUrl?: string;
   url?: string;
+  storagePath?: string;
+  isTemp?: boolean;
+  uploadProgress?: number;
+  isUploading?: boolean;
 }
 
 export interface Note {

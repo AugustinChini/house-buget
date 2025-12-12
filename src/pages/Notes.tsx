@@ -15,6 +15,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  LinearProgress,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -24,6 +25,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import type { Note, NoteAttachment } from "../models/Note";
 import { noteService } from "../services/notesService";
+import { uploadFile } from "../services/uploadService";
 import { RichTextEditor } from "../components/RichTextEditor";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -57,14 +59,6 @@ const getAttachmentDownloadHref = (attachment: NoteAttachment) => {
   }
   return undefined;
 };
-
-const readFileAsDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
 
 export function Notes() {
   const [id, setId] = useState<number | null>(null);
@@ -110,23 +104,66 @@ export function Notes() {
     const files = event.target.files;
     if (!files) return;
 
-    try {
-      const preparedAttachments = await Promise.all(
-        Array.from(files).map(async (file) => ({
-          id: crypto.randomUUID(),
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          dataUrl: await readFileAsDataUrl(file),
-        }))
-      );
+    // Reset input immediately to allow selecting same files again
+    event.target.value = "";
 
-      setAttachments((prev) => [...prev, ...preparedAttachments]);
-    } catch (error) {
-      console.error("Impossible de lire les fichiers sélectionnés.", error);
-    } finally {
-      // Reset input to allow selecting same files twice
-      event.target.value = "";
+    const fileArray = Array.from(files);
+
+    // Create placeholder attachments with upload progress
+    const placeholders: NoteAttachment[] = fileArray.map((file) => ({
+      id: crypto.randomUUID(),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      isUploading: true,
+      uploadProgress: 0,
+    }));
+
+    setAttachments((prev) => [...prev, ...placeholders]);
+
+    // Upload files one by one
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const placeholderId = placeholders[i].id;
+
+      try {
+        const result = await uploadFile(file, {
+          onProgress: (progress) => {
+            setAttachments((prev) =>
+              prev.map((att) =>
+                att.id === placeholderId
+                  ? { ...att, uploadProgress: progress.percent }
+                  : att
+              )
+            );
+          },
+        });
+
+        // Replace placeholder with uploaded attachment
+        setAttachments((prev) =>
+          prev.map((att) =>
+            att.id === placeholderId
+              ? {
+                  id: result.id,
+                  name: result.name,
+                  size: result.size,
+                  type: result.type,
+                  url: result.url,
+                  storagePath: result.storagePath,
+                  isTemp: result.isTemp,
+                  isUploading: false,
+                  uploadProgress: 100,
+                }
+              : att
+          )
+        );
+      } catch (error) {
+        console.error(`Erreur lors de l'upload de ${file.name}:`, error);
+        // Remove failed placeholder
+        setAttachments((prev) =>
+          prev.filter((att) => att.id !== placeholderId)
+        );
+      }
     }
   };
 
@@ -242,49 +279,69 @@ export function Notes() {
                     <ListItem
                       key={attachment.id}
                       disablePadding
-                      sx={{ py: 0.5, pl: 0 }}
+                      sx={{
+                        py: 0.5,
+                        pl: 0,
+                        flexDirection: "column",
+                        alignItems: "stretch",
+                      }}
                       secondaryAction={
-                        <Stack direction="row" spacing={1}>
-                          {(() => {
-                            const downloadHref =
-                              getAttachmentDownloadHref(attachment);
-                            return downloadHref ? (
-                              <IconButton
-                                component="a"
-                                href={downloadHref}
-                                download={attachment.name}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                size="small"
-                              >
-                                <DownloadIcon fontSize="small" />
-                              </IconButton>
-                            ) : (
-                              <IconButton size="small" disabled>
-                                <DownloadIcon fontSize="small" />
-                              </IconButton>
-                            );
-                          })()}
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() =>
-                              handleRemoveAttachment(attachment.id)
-                            }
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
+                        !attachment.isUploading && (
+                          <Stack direction="row" spacing={1}>
+                            {(() => {
+                              const downloadHref =
+                                getAttachmentDownloadHref(attachment);
+                              return downloadHref ? (
+                                <IconButton
+                                  component="a"
+                                  href={downloadHref}
+                                  download={attachment.name}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  size="small"
+                                >
+                                  <DownloadIcon fontSize="small" />
+                                </IconButton>
+                              ) : (
+                                <IconButton size="small" disabled>
+                                  <DownloadIcon fontSize="small" />
+                                </IconButton>
+                              );
+                            })()}
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() =>
+                                handleRemoveAttachment(attachment.id)
+                              }
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                        )
                       }
                     >
                       <ListItemText
                         primaryTypographyProps={{ variant: "body2" }}
                         secondaryTypographyProps={{ variant: "caption" }}
                         primary={attachment.name}
-                        secondary={`${
-                          attachment.type || "Fichier"
-                        } · ${formatBytes(attachment.size)}`}
+                        secondary={
+                          attachment.isUploading
+                            ? `Téléchargement... ${
+                                attachment.uploadProgress || 0
+                              }%`
+                            : `${attachment.type || "Fichier"} · ${formatBytes(
+                                attachment.size
+                              )}`
+                        }
                       />
+                      {attachment.isUploading && (
+                        <LinearProgress
+                          variant="determinate"
+                          value={attachment.uploadProgress || 0}
+                          sx={{ mt: 0.5, mr: 2 }}
+                        />
+                      )}
                     </ListItem>
                   ))}
                 </List>
@@ -306,7 +363,13 @@ export function Notes() {
               >
                 Annuler
               </Button>
-              <Button onClick={onSave} variant="contained" disabled={isSaving}>
+              <Button
+                onClick={onSave}
+                variant="contained"
+                disabled={
+                  isSaving || attachments.some((att) => att.isUploading)
+                }
+              >
                 Enregistrer
               </Button>
             </Box>

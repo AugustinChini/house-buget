@@ -9,6 +9,7 @@ require("dotenv").config();
 const categoryRoutes = require("./routes/categories");
 const expenseRoutes = require("./routes/expenses");
 const notesRoutes = require("./routes/notes");
+const uploadsRoutes = require("./routes/uploads");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +41,7 @@ app.use("/uploads", express.static(uploadsPath));
 app.use("/categories", categoryRoutes);
 app.use("/expenses", expenseRoutes);
 app.use("/notes", notesRoutes);
+app.use("/uploads", uploadsRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
