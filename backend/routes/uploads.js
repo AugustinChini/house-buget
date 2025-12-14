@@ -7,7 +7,10 @@ const { randomUUID } = require("crypto");
 const router = express.Router();
 
 // Configuration
-const UPLOAD_MAX_SIZE = parseInt(process.env.UPLOAD_MAX_SIZE || "104857600", 10); // 100 MB default
+const UPLOAD_MAX_SIZE = parseInt(
+  process.env.UPLOAD_MAX_SIZE || "1073741824",
+  10
+); // 1 GB default
 const uploadsRoot = path.join(__dirname, "..", "uploads");
 const tempRoot = path.join(uploadsRoot, "temp");
 
@@ -72,7 +75,9 @@ router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
       return res.status(413).json({
-        error: `File too large. Maximum size is ${Math.round(UPLOAD_MAX_SIZE / 1024 / 1024)} MB`,
+        error: `File too large. Maximum size is ${Math.round(
+          UPLOAD_MAX_SIZE / 1024 / 1024
+        )} GB`,
       });
     }
     return res.status(400).json({ error: err.message });
@@ -81,4 +86,3 @@ router.use((err, req, res, next) => {
 });
 
 module.exports = router;
-

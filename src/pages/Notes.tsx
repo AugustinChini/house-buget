@@ -102,12 +102,13 @@ export function Notes() {
 
   const handleFilesSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    // Reset input immediately to allow selecting same files again
-    event.target.value = "";
-
+    // Copy files BEFORE resetting input (FileList is a live reference)
     const fileArray = Array.from(files);
+
+    // Reset input to allow selecting same files again
+    event.target.value = "";
 
     // Create placeholder attachments with upload progress
     const placeholders: NoteAttachment[] = fileArray.map((file) => ({
