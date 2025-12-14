@@ -1,4 +1,9 @@
 import type { NoteAttachment } from "../models/Note";
+import {
+  getAuthToken,
+  removeAuthToken,
+  AUTH_REQUIRED_EVENT,
+} from "./apiService";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -56,6 +61,11 @@ export const uploadFile = (
         } catch {
           reject(new Error("Invalid response from server"));
         }
+      } else if (xhr.status === 403) {
+        // Handle 403 Forbidden - dispatch event to show PIN modal
+        removeAuthToken();
+        window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
+        reject(new Error("Access denied"));
       } else {
         try {
           const error = JSON.parse(xhr.responseText);
@@ -78,6 +88,13 @@ export const uploadFile = (
 
     // Send request
     xhr.open("POST", `${API_BASE_URL}/uploads`);
+
+    // Add Authorization header if authenticated
+    const authToken = getAuthToken();
+    if (authToken) {
+      xhr.setRequestHeader("Authorization", `Bearer ${authToken.token}`);
+    }
+
     xhr.send(formData);
   });
 };
@@ -111,4 +128,3 @@ export const uploadFiles = async (
 
   return results;
 };
-

@@ -3,24 +3,79 @@ import type { Expense } from "../models/Expense";
 import type { Note } from "../models/Note";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const AUTH_TOKEN_KEY = "budget_app_auth_token";
+
+// Event dispatched when authentication fails (403)
+export const AUTH_REQUIRED_EVENT = "authRequired";
+
+export interface AuthToken {
+  token: string;
+  expiresAt: string;
+}
+
+// Helper functions for token management
+export const getAuthToken = (): AuthToken | null => {
+  const stored = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!stored) return null;
+  try {
+    const authToken = JSON.parse(stored) as AuthToken;
+    // Check if token is expired
+    if (new Date(authToken.expiresAt) <= new Date()) {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      return null;
+    }
+    return authToken;
+  } catch {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    return null;
+  }
+};
+
+export const setAuthToken = (authToken: AuthToken): void => {
+  localStorage.setItem(AUTH_TOKEN_KEY, JSON.stringify(authToken));
+};
+
+export const removeAuthToken = (): void => {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+};
+
+export const isAuthenticated = (): boolean => {
+  return getAuthToken() !== null;
+};
 
 class ApiService {
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    requiresAuth: boolean = true
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
 
-    const defaultOptions: RequestInit = {
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
     };
 
-    const response = await fetch(url, { ...defaultOptions, ...options });
+    // Add Authorization header if authenticated and auth is required
+    if (requiresAuth) {
+      const authToken = getAuthToken();
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken.token}`;
+      }
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
 
     if (!response.ok) {
+      // Handle 403 Forbidden - dispatch event to show PIN modal
+      if (response.status === 403) {
+        removeAuthToken();
+        window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
+      }
+
       const errorData = await response
         .json()
         .catch(() => ({ error: "Unknown error" }));
@@ -30,6 +85,45 @@ class ApiService {
     }
 
     return response.json();
+  }
+
+  // Authentication methods
+  async login(pin: string): Promise<AuthToken> {
+    const response = await this.request<AuthToken>(
+      "/auth/login",
+      {
+        method: "POST",
+        body: JSON.stringify({ pin }),
+      },
+      false // No auth required for login
+    );
+    setAuthToken(response);
+    return response;
+  }
+
+  async logout(): Promise<void> {
+    try {
+      await this.request<{ message: string }>(
+        "/auth/logout",
+        { method: "POST" },
+        true
+      );
+    } finally {
+      removeAuthToken();
+    }
+  }
+
+  async verifyToken(): Promise<boolean> {
+    try {
+      const response = await this.request<{ valid: boolean }>(
+        "/auth/verify",
+        {},
+        true
+      );
+      return response.valid;
+    } catch {
+      return false;
+    }
   }
 
   // Category methods

@@ -12,6 +12,7 @@ import { CreateExpenseModal } from "./components/CreateExpenseModal";
 import { RecurringExpenseModal } from "./components/RecurringExpenseModal";
 import { PinCodeModal } from "./components/PinCodeModal";
 import { Notes } from "./pages/Notes";
+import { isAuthenticated, AUTH_REQUIRED_EVENT } from "./services/apiService";
 
 const theme = createTheme({
   palette: {
@@ -27,37 +28,31 @@ const theme = createTheme({
   },
 });
 
-const PIN_CODE = "1234"; // À modifier pour personnaliser le code
-const PIN_TOKEN_KEY = "budget_app_pin_token";
-const PIN_TOKEN_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 1 mois
-
-function isPinTokenValid() {
-  const token = localStorage.getItem(PIN_TOKEN_KEY);
-  if (!token) return false;
-  try {
-    const { expiresAt } = JSON.parse(token);
-    return Date.now() < expiresAt;
-  } catch {
-    return false;
-  }
-}
-
-function setPinToken() {
-  const expiresAt = Date.now() + PIN_TOKEN_DURATION_MS;
-  localStorage.setItem(PIN_TOKEN_KEY, JSON.stringify({ expiresAt }));
-}
-
 function AppContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [categories, setCategories] = useState<
     Array<{ id: number; name: string }>
   >([]);
   const [recurringModalOpen, setRecurringModalOpen] = useState(false);
-  const [pinModalOpen, setPinModalOpen] = useState(!isPinTokenValid());
+  const [pinModalOpen, setPinModalOpen] = useState(!isAuthenticated());
   const [isAtTop, setIsAtTop] = useState(true);
 
-  // Load categories for the modal
+  // Listen for authentication required events (403 errors)
   useEffect(() => {
+    const handleAuthRequired = () => {
+      setPinModalOpen(true);
+    };
+
+    window.addEventListener(AUTH_REQUIRED_EVENT, handleAuthRequired);
+    return () => {
+      window.removeEventListener(AUTH_REQUIRED_EVENT, handleAuthRequired);
+    };
+  }, []);
+
+  // Load categories for the modal (only when authenticated)
+  useEffect(() => {
+    if (pinModalOpen) return; // Don't load if not authenticated
+
     const loadCategories = async () => {
       try {
         const { categoryService } = await import("./services");
@@ -73,10 +68,12 @@ function AppContent() {
       }
     };
     loadCategories();
-  }, []);
+  }, [pinModalOpen]);
 
-  // Check for recurring expenses on app start
+  // Check for recurring expenses on app start (only when authenticated)
   useEffect(() => {
+    if (pinModalOpen) return; // Don't check if not authenticated
+
     const checkRecurringExpenses = async () => {
       try {
         const shouldShow =
@@ -92,7 +89,7 @@ function AppContent() {
     // Wait a bit for the app to initialize before checking
     const timer = setTimeout(checkRecurringExpenses, 1000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [pinModalOpen]);
 
   // Show FAB only when page scroll is at top
   useEffect(() => {
@@ -121,17 +118,13 @@ function AppContent() {
   };
 
   const handlePinSuccess = () => {
-    setPinToken();
+    // Token is already stored by apiService.login()
     setPinModalOpen(false);
   };
 
   return (
     <>
-      <PinCodeModal
-        open={pinModalOpen}
-        onSuccess={handlePinSuccess}
-        correctPin={PIN_CODE}
-      />
+      <PinCodeModal open={pinModalOpen} onSuccess={handlePinSuccess} />
       {/* Le reste de l'app est désactivé tant que le code n'est pas validé */}
       <div
         style={{

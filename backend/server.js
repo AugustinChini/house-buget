@@ -10,6 +10,8 @@ const categoryRoutes = require("./routes/categories");
 const expenseRoutes = require("./routes/expenses");
 const notesRoutes = require("./routes/notes");
 const uploadsRoutes = require("./routes/uploads");
+const authRoutes = require("./routes/auth");
+const { authMiddleware } = require("./middleware/auth");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,11 +39,14 @@ app.use(
 );
 app.use("/uploads", express.static(uploadsPath));
 
-// Routes
-app.use("/categories", categoryRoutes);
-app.use("/expenses", expenseRoutes);
-app.use("/notes", notesRoutes);
-app.use("/uploads", uploadsRoutes);
+// Public routes (no authentication required)
+app.use("/auth", authRoutes);
+
+// Protected routes (authentication required)
+app.use("/categories", authMiddleware, categoryRoutes);
+app.use("/expenses", authMiddleware, expenseRoutes);
+app.use("/notes", authMiddleware, notesRoutes);
+app.use("/uploads", authMiddleware, uploadsRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
