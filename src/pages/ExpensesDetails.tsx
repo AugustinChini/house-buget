@@ -213,7 +213,8 @@ export function ExpensesDetails() {
         sx={{
           mb: 3,
           color: "common.white",
-          background: "linear-gradient(135deg, #001576 0%, #d2a6ff 100%)",
+          background:
+            "linear-gradient(135deg, #001576 0%,rgb(91, 0, 183) 100%)",
           boxShadow: 4,
         }}
       >
